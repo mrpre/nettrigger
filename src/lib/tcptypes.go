@@ -1,8 +1,10 @@
 package tcplib
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"encoding/binary"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -364,7 +366,7 @@ func (tcp *TCPIP) Accept(resp *TCPIP) {
 }
 
 //receive tcp corresponding response
-func (tcp *TCPIP) Recv(ctx context.Context, fd int) *TCPIP {
+func (tcp *TCPIP) Recv(ctx context.Context, fd int, exceptACK *uint32) *TCPIP {
 	b := make([]byte, 1600)
 
 	for {
@@ -399,9 +401,16 @@ func (tcp *TCPIP) Recv(ctx context.Context, fd int) *TCPIP {
 				var resp TCPIP
 				resp.Sequence = make([]byte, 4)
 				resp.AckNo = make([]byte, 4)
-
 				copy(resp.Sequence, tcpBuffer[4:8])
 				copy(resp.AckNo, tcpBuffer[8:12])
+				//only recv what we want
+				var respACK uint32
+				bytebuff := bytes.NewBuffer(resp.AckNo)
+				binary.Read(bytebuff, binary.BigEndian, &respACK)
+				if exceptACK != nil && *exceptACK != respACK {
+					continue
+				}
+
 				resp.Offset = (uint16)(tcpBuffer[12])<<8 | (uint16)(tcpBuffer[13])
 				tcpHeaderLen := resp.GetTcpHeaderLen()
 
@@ -516,7 +525,7 @@ func (tcp *TCPIP) DoHandshake() error {
 	tcp.Send()
 	ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 	//receive the syn ack and update seq ...
-	resp := tcp.Recv(ctx, fd)
+	resp := tcp.Recv(ctx, fd, nil)
 	if resp == nil {
 		panic(fmt.Errorf("time out waiting SYN ACK"))
 	}

@@ -27,6 +27,8 @@ func main() {
 	destAddr := flag.String("d", "", "destination address ip:port")
 	content := flag.String("h", "474554202f20485454502f312e310d0a0d0a", "hex string content that will send to remote if tcp handshake success. Defeult is 'GET / HTTP/1.1\\r\\n\\r\\n'")
 	ifaceName := flag.String("i", "", "Network Interface")
+	action := flag.String("action", "", "the true action")
+
 	flag.Parse()
 
 	userData, err := hex.DecodeString(*content)
@@ -69,12 +71,17 @@ func main() {
 	packet.SetSource(source.IP.String(), uint16(source.Port))
 	packet.SetTarget(dest.IP.String(), uint16(dest.Port))
 
-	packet.PAWSPassiveReject(userData)
-
-	/*
-		packet.FloodTarget(
-			reflect.TypeOf(packet).Elem(),
-			reflect.ValueOf(packet).Elem(),
-		)
-	*/
+	//test paws in timewait
+	//must do 'sudo iptables -t filter -I OUTPUT -p tcp --sport YOUR_SOURCE_PORT --tcp-flags RST RST -j DROP' before run
+	if *action == "" {
+		packet.PAWSPassiveReject(userData)
+		packet.AcceptFull(*destAddr)
+		packet.ProvenDrop(*destAddr)
+	} else if *action == "paws" {
+		packet.PAWSPassiveReject(userData)
+	} else if *action == "accept" {
+		packet.AcceptFull(*destAddr)
+	} else if *action == "proven" {
+		packet.ProvenDrop(*destAddr)
+	}
 }

@@ -38,7 +38,7 @@ func (tcp *TCPIP) PAWSPassiveReject(userData []byte) {
 	//we just care about whether remote send the FIN
 	//5s may cause a lot of retransmission of remote
 	for {
-		resp = tcp.Recv(ctx, tcp.FD)
+		resp = tcp.Recv(ctx, tcp.FD, nil)
 		if resp != nil {
 			respSaved = resp
 		} else {
@@ -64,7 +64,7 @@ func (tcp *TCPIP) PAWSPassiveReject(userData []byte) {
 	tcp.Send()
 	//consume the server last ACK
 	ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
-	resp = tcp.Recv(ctx, tcp.FD)
+	resp = tcp.Recv(ctx, tcp.FD, nil)
 	if resp != nil && !resp.ACK() {
 		panic("last ack not received")
 	}
@@ -105,7 +105,7 @@ func (tcp *TCPIP) PAWSPassiveReject(userData []byte) {
 
 	ctx, _ = context.WithTimeout(context.Background(), 5*time.Second)
 	for {
-		resp = tcp.Recv(ctx, tcp.FD)
+		resp = tcp.Recv(ctx, tcp.FD, nil)
 		if resp != nil {
 			respSaved = resp
 		} else {
