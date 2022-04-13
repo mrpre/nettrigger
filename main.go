@@ -71,17 +71,28 @@ func main() {
 	packet.SetSource(source.IP.String(), uint16(source.Port))
 	packet.SetTarget(dest.IP.String(), uint16(dest.Port))
 
-	//test paws in timewait
-	//must do 'sudo iptables -t filter -I OUTPUT -p tcp --sport YOUR_SOURCE_PORT --tcp-flags RST RST -j DROP' before run
 	if *action == "" {
 		packet.PAWSPassiveReject(userData)
 		packet.AcceptFull(*destAddr)
 		packet.ProvenDrop(*destAddr)
+		//packet.OfoNormal(userData)
+		//packet.OfoCoalesce(userData)
 	} else if *action == "paws" {
 		packet.PAWSPassiveReject(userData)
 	} else if *action == "accept" {
 		packet.AcceptFull(*destAddr)
 	} else if *action == "proven" {
 		packet.ProvenDrop(*destAddr)
+	} else if *action == "half" {
+		packet.HalfOpenFULL(*destAddr)
+	} else if *action == "ofo" {
+		packet.OfoNormal(userData)
+	} else if *action == "ofocoalesce" {
+		//coalesce also triggered by OfoRecover
+		packet.OfoRecover(userData)
+	} else if *action == "oforecover" {
+		packet.OfoRecover(userData)
+	} else if *action == "ofoprune" {
+		packet.OfoPrune(userData)
 	}
 }

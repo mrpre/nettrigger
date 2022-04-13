@@ -6,7 +6,9 @@ import (
 	"time"
 )
 
-// do three way handshake
+// client: 'sudo iptables -t filter -I OUTPUT -p tcp --sport YOUR_SOURCE_PORT --tcp-flags RST RST -j DROP'
+// server: a server which will close normally when recv userData
+// by default userData is HTTP GET and you can just start HTTP server like 'python -m SimpleHTTPServer 8080'
 func (tcp *TCPIP) PAWSPassiveReject(userData []byte) {
 	// 3-way tcp handshake
 	// make tcp connection active closed by remote

@@ -342,7 +342,37 @@ func (tcp *TCPIP) IncrSeq(seq uint32) {
 
 	//fmt.Println("update seq", "resp", resp.Sequence, "ack seq", seq.Bytes())
 	copy(tcp.Sequence, newqseq.Bytes())
+}
 
+func (tcp *TCPIP) DecSeq(seq uint32) {
+	newqseq := new(big.Int)
+	x := new(big.Int)
+	y := new(big.Int)
+	x.SetBytes(tcp.Sequence)
+	y.SetUint64(uint64(seq))
+
+	newqseq.Sub(x, y)
+
+	//fmt.Println("update seq", "resp", resp.Sequence, "ack seq", seq.Bytes())
+	copy(tcp.Sequence, newqseq.Bytes())
+}
+
+func (tcp *TCPIP) SetSeqUint(seq uint32) {
+	x := new(big.Int)
+	x.SetUint64(uint64(seq))
+
+	//fmt.Println("update seq", "resp", resp.Sequence, "ack seq", seq.Bytes())
+	copy(tcp.Sequence, x.Bytes())
+}
+
+func (tcp *TCPIP) SetSeq(seq []byte) {
+	copy(tcp.Sequence, seq)
+}
+
+func (tcp *TCPIP) GetSeq() []byte {
+	ret := make([]byte, 4)
+	copy(ret, tcp.Sequence)
+	return ret
 }
 
 // update current tcp ack seq for next sent and remote TS
