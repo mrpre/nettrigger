@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/big"
 	"reflect"
 	"strconv"
@@ -208,6 +209,34 @@ func (tcp *TCPIP) CalcTCPChecksum() {
 	//fmt.Println("real TCPChecksum", tcp.TCPChecksum)
 }
 
+func (tcp *TCPIP) InitACK(seq uint32) {
+	headrLen := uint16(0x0014 + len(tcp.Options) + 0)
+	if headrLen%4 != 0 {
+		panic(fmt.Errorf("tcp heaer must be 4 multiples"))
+	}
+	tcp.TCPHeaderLength = headrLen
+	tcp.VersionIHL = 0x45
+	tcp.TOS = 0x00
+	//tcp.TotalLen filled by kernel, uint16(0x0028 + len(tcp.Options))
+	tcp.ID = 0x0000
+	tcp.FlagsFrag = 0x0000
+	tcp.TTL = 0x40
+	tcp.Protocol = 0x06
+	tcp.IPChecksum = 0x0000 //kernel will compute it
+
+	tcp.Sequence = make([]byte, 4)
+	tcp.AckNo = make([]byte, 4)
+	tcp.Sequence[0] = (uint8)(seq>>24) & 0xff
+	tcp.Sequence[1] = (uint8)(seq>>16) & 0xff
+	tcp.Sequence[2] = (uint8)(seq>>8) & 0xff
+	tcp.Sequence[3] = (uint8)(seq>>0) & 0xff
+	//reserved automatically zero
+	tcp.Offset = uint16(((uint32)(headrLen / 4)) << 12)
+	tcp.SetFlag(FLAGACK)
+	tcp.Window = 0xFAF0
+	tcp.UrgentPointer = 0x0000
+}
+
 func SYNflag() uint8 {
 	return 1 << 1
 }
@@ -274,11 +303,11 @@ func (tcp TCPIP) RawSocketSend(fd int, sockaddr syscall.SockaddrInet4) {
 		fmt.Println(err)
 	} else {
 		fmt.Printf(
-			"Socket send to:  %d.%d.%d.%d:%d size %d\n",
+			"[%s]Socket send to:  %d.%d.%d.%d:%d size %d\n",
+			time.Now().Format("1970-01-01 00:00:00"),
 			tcp.DST[0], tcp.DST[1], tcp.DST[2], tcp.DST[3], tcp.DstPort, len(tcp.RawBuffer),
 		)
 	}
-
 }
 
 func (tcp *TCPIP) FloodTarget(rType reflect.Type, rVal reflect.Value) {
@@ -583,5 +612,6 @@ func (tcp *TCPIP) DoHandshake() error {
 	//send ACK
 	tcp.Send()
 
+	log.Println("handshake success")
 	return nil
 }

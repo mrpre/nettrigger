@@ -164,3 +164,53 @@ func (tcp *TCPIP) OfoPrune(userData []byte) {
 		n++
 	}
 }
+
+// client: 'sudo iptables -t filter -I OUTPUT -p tcp --sport YOUR_SOURCE_PORT --tcp-flags RST RST -j DROP'
+// Run Server as:
+/*
+import socket
+import time
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_DEBUG, 1)
+sock.bind(("0.0.0.0", 9999))
+sock.listen(16)
+while True:
+    c, addr = sock.accept()
+    c.setsockopt(socket.SOL_SOCKET, socket.SO_DEBUG, 1)
+    c.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUFFORCE, 1024)
+    time.sleep(20)
+    c.close()
+*/
+//skip seq and send packet to make server treat pakcet as out of order packet
+func (tcp *TCPIP) OfoPruneDrop(userData []byte) {
+	if err := tcp.DoHandshake(); err != nil {
+		panic(err)
+	}
+
+	//userData is too small to trigger drop
+	tmp := make([]byte, 1024)
+
+	n := 0
+	for n < 5 {
+		tcp.AddData(tmp)
+		tcp.CalcTCPChecksum()
+		tcp.Send()
+		tcp.IncrSeq(uint32(len(tcp.UserData)))
+		time.Sleep(100 * time.Millisecond)
+		n++
+	}
+
+	time.Sleep(100 * time.Millisecond)
+	//make a hole
+	tcp.IncrSeq(1)
+	n = 0
+	for n < 5 {
+		tcp.AddData(tmp)
+		tcp.CalcTCPChecksum()
+		tcp.Send()
+		tcp.IncrSeq(uint32(len(tcp.UserData)))
+		tcp.IncrSeq(1)
+		time.Sleep(100 * time.Millisecond)
+		n++
+	}
+}

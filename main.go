@@ -22,11 +22,10 @@ func main() {
 		exitErr(fmt.Errorf("root privileges required for execution"))
 	}
 
-	//sudo iptables -t filter -I OUTPUT -p tcp --sport 12345 --tcp-flags RST RST -j DROP
 	sourceAddr := flag.String("s", "", "source address ip:port")
 	destAddr := flag.String("d", "", "destination address ip:port")
-	content := flag.String("h", "474554202f20485454502f312e310d0a0d0a", "hex string content that will send to remote if tcp handshake success. Defeult is 'GET / HTTP/1.1\\r\\n\\r\\n'")
-	ifaceName := flag.String("i", "", "Network Interface")
+	content := flag.String("h", "474554202f20485454502f312e310d0a0d0a", "hex string content that will send to remote after tcp handshake success. Defeult is 'GET / HTTP/1.1\\r\\n\\r\\n'")
+	devName := flag.String("i", "", "Network Interface")
 	action := flag.String("action", "", "the true action")
 
 	flag.Parse()
@@ -47,18 +46,18 @@ func main() {
 	}
 
 	var packet = &tcplib.TCPIP{}
-	var foundIface bool = false
-	foundIfaces := packet.GetInterfaces()
-	for _, name := range foundIfaces {
-		if name != *ifaceName {
+	var foundDev bool = false
+	foundDevs := packet.GetInterfaces()
+	for _, name := range foundDevs {
+		if name != *devName {
 			continue
 		}
-		foundIface = true
+		foundDev = true
 	}
 
-	if !foundIface {
+	if !foundDev {
 		msg := "Invalid argument for -i <interface> Found: %s"
-		errmsg := fmt.Errorf(msg, strings.Join(foundIfaces, ", "))
+		errmsg := fmt.Errorf(msg, strings.Join(foundDevs, ", "))
 		exitErr(errmsg)
 	}
 
@@ -71,13 +70,7 @@ func main() {
 	packet.SetSource(source.IP.String(), uint16(source.Port))
 	packet.SetTarget(dest.IP.String(), uint16(dest.Port))
 
-	if *action == "" {
-		packet.PAWSPassiveReject(userData)
-		packet.AcceptFull(*destAddr)
-		packet.ProvenDrop(*destAddr)
-		//packet.OfoNormal(userData)
-		//packet.OfoCoalesce(userData)
-	} else if *action == "paws" {
+	if *action == "paws" {
 		packet.PAWSPassiveReject(userData)
 	} else if *action == "accept" {
 		packet.AcceptFull(*destAddr)
@@ -94,5 +87,15 @@ func main() {
 		packet.OfoRecover(userData)
 	} else if *action == "ofoprune" {
 		packet.OfoPrune(userData)
+	} else if *action == "ofoprunedrop" {
+		packet.OfoPruneDrop(userData)
+	} else if *action == "recvdrop" {
+		packet.RecvDrop(userData)
+	} else if *action == "synackdrop" {
+		packet.SynAckDrop(userData)
+	} else if *action == "send4k" {
+		packet.SendData(4000)
+	} else if *action == "rawack" {
+		packet.RawAck()
 	}
 }
